@@ -1,2 +1,11 @@
 **/Debug.win32/
 *.pch
+
+# Visual Studio local cache/build artifacts
+**/.vs/
+*.ipch
+*.pdb
+*.obj
+*.ilk
+*.idb
+*.VC.db
