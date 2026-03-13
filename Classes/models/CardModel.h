@@ -7,17 +7,31 @@
 #include "models/CardTypes.h"
 
 /**
- * CardModel runtime data for one card.
+ * @brief 单张卡牌运行时模型。
+ *
+ * 仅描述卡牌状态数据，不承载业务流程。支持 JSON 序列化与反序列化，
+ * 用于局内存档恢复。
  */
 struct CardModel
 {
+    /** 卡牌唯一 id。 */
     int id = -1;
+    /** 卡牌点数。 */
     CardFaceType face = CFT_NONE;
+    /** 卡牌花色。 */
     CardSuitType suit = CST_NONE;
+    /** 卡牌来源（场上或牌堆）。 */
     CardSourceType source = CST_PLAYFIELD;
+    /** 卡牌当前所在区域。 */
     CardZoneType zone = CZT_HIDDEN;
+    /** 卡牌原始布局坐标。 */
     cocos2d::Vec2 originalPosition = cocos2d::Vec2::ZERO;
 
+    /**
+     * @brief 序列化为 JSON 对象。
+     * @param allocator RapidJSON 分配器。
+     * @return 对应的 JSON 值对象。
+     */
     rapidjson::Value toJson(rapidjson::Document::AllocatorType& allocator) const
     {
         rapidjson::Value obj(rapidjson::kObjectType);
@@ -35,6 +49,11 @@ struct CardModel
         return obj;
     }
 
+    /**
+     * @brief 从 JSON 对象反序列化。
+     * @param obj 输入 JSON 对象。
+     * @return true 表示解析成功；false 表示解析失败。
+     */
     bool fromJson(const rapidjson::Value& obj)
     {
         if (!obj.IsObject())

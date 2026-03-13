@@ -10,17 +10,31 @@
 #include "models/CardModel.h"
 
 /**
- * GameModel stores complete runtime state of one level.
+ * @brief 单局游戏运行时数据模型。
+ *
+ * 保存局内卡牌索引、区域分组、顶部牌与牌堆游标等状态，
+ * 支持序列化与反序列化，用于存档恢复。
  */
 struct GameModel
 {
+    /** 当前关卡编号。 */
     int levelId = 0;
+    /** 全量卡牌索引：cardId -> CardModel。 */
     std::map<int, CardModel> cards;
+    /** 场上牌 id 列表。 */
     std::vector<int> playfieldCardIds;
+    /** 牌堆牌 id 列表。 */
     std::vector<int> stackCardIds;
+    /** 当前顶部牌 id。 */
     int topCardId = -1;
+    /** 牌堆可抽位置游标。 */
     int stackDrawIndex = 1;
 
+    /**
+     * @brief 序列化为 JSON 对象。
+     * @param allocator RapidJSON 分配器。
+     * @return 对应的 JSON 值对象。
+     */
     rapidjson::Value toJson(rapidjson::Document::AllocatorType& allocator) const
     {
         rapidjson::Value obj(rapidjson::kObjectType);
@@ -52,6 +66,11 @@ struct GameModel
         return obj;
     }
 
+    /**
+     * @brief 从 JSON 对象反序列化。
+     * @param obj 输入 JSON 对象。
+     * @return true 表示解析成功；false 表示解析失败。
+     */
     bool fromJson(const rapidjson::Value& obj)
     {
         if (!obj.IsObject())
@@ -105,6 +124,10 @@ struct GameModel
         return true;
     }
 
+    /**
+     * @brief 序列化为 JSON 字符串。
+     * @return JSON 文本。
+     */
     std::string toJsonString() const
     {
         rapidjson::Document doc;
@@ -118,6 +141,11 @@ struct GameModel
         return std::string(buffer.GetString(), buffer.GetSize());
     }
 
+    /**
+     * @brief 从 JSON 字符串反序列化。
+     * @param json JSON 文本。
+     * @return true 表示解析成功；false 表示解析失败。
+     */
     bool fromJsonString(const std::string& json)
     {
         rapidjson::Document doc;

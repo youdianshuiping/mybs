@@ -27,14 +27,30 @@
 
 #include "cocos2d.h"
 
+/**
+ * @brief 默认示例场景。
+ *
+ * 该场景来自模板工程，主要用于最小化启动示例和基础 UI 验证。
+ */
 class HelloWorld : public cocos2d::Scene
 {
 public:
+    /**
+     * @brief 创建场景对象。
+     * @return 场景对象指针。
+     */
     static cocos2d::Scene* createScene();
 
+    /**
+     * @brief 初始化示例场景。
+     * @return true 表示初始化成功；false 表示失败。
+     */
     virtual bool init();
     
-    // Selector callback
+    /**
+     * @brief 关闭按钮回调。
+     * @param pSender 事件发送者。
+     */
     void menuCloseCallback(cocos2d::Ref* pSender);
     
     // Implement the static create() method manually

@@ -178,19 +178,7 @@ void GameController::_handleUndoClick()
     }
 
     UndoRecord record;
-    if (!_undoManager.popRecord(record))
-    {
-        _gameView->setTipText("No undo history");
-        _gameView->setUndoEnabled(false);
-        return;
-    }
-
-    const int movedCardId = record.movedCardId;
-    const int previousTopCardId = record.previousTopCardId;
-
-    auto movedIt = _gameModel->cards.find(movedCardId);
-    auto previousTopIt = _gameModel->cards.find(previousTopCardId);
-    if (movedIt == _gameModel->cards.end() || previousTopIt == _gameModel->cards.end())
+    if (!_tryPopUndoRecord(record) || !_hasUndoRecordCards(record))
     {
         return;
     }
@@ -198,36 +186,60 @@ void GameController::_handleUndoClick()
     _isAnimating = true;
 
     // Replay reverse movement first, then restore model state in callback.
-    _gameView->setCardVisible(movedCardId, true);
-    _gameView->moveCardToPosition(movedCardId, record.movedFromPos, [this, record]() {
-        CardModel& movedCard = _gameModel->cards[record.movedCardId];
-        CardModel& previousTop = _gameModel->cards[record.previousTopCardId];
-
-        previousTop.zone = CZT_TOP;
-        _gameModel->topCardId = record.previousTopCardId;
-
-        if (record.source == UMS_PLAYFIELD)
-        {
-            movedCard.zone = CZT_PLAYFIELD;
-            _gameView->setCardVisible(record.movedCardId, true);
-            _gameView->setCardPosition(record.movedCardId, record.movedFromPos);
-            _gameView->setCardZOrder(record.movedCardId, 10);
-        }
-        else
-        {
-            movedCard.zone = CZT_STACK;
-            _gameModel->stackDrawIndex = record.previousStackDrawIndex;
-            _gameView->setCardPosition(record.movedCardId, _gameView->getStackPeekSlotPosition());
-        }
-
-        _gameView->setCardVisible(record.previousTopCardId, true);
-        _gameView->setTopCard(record.previousTopCardId);
-        _gameView->setStackPeekCard(_getStackPeekCardId());
-
-        _refreshViewState();
-        _saveGameProgress();
-        _isAnimating = false;
+    _gameView->setCardVisible(record.movedCardId, true);
+    _gameView->moveCardToPosition(record.movedCardId, record.movedFromPos, [this, record]() {
+        _restoreStateFromUndoRecord(record);
     });
+}
+
+bool GameController::_tryPopUndoRecord(UndoRecord& outRecord)
+{
+    if (_undoManager.popRecord(outRecord))
+    {
+        return true;
+    }
+
+    _gameView->setTipText("No undo history");
+    _gameView->setUndoEnabled(false);
+    return false;
+}
+
+bool GameController::_hasUndoRecordCards(const UndoRecord& record) const
+{
+    const auto movedIt = _gameModel->cards.find(record.movedCardId);
+    const auto previousTopIt = _gameModel->cards.find(record.previousTopCardId);
+    return movedIt != _gameModel->cards.end() && previousTopIt != _gameModel->cards.end();
+}
+
+void GameController::_restoreStateFromUndoRecord(const UndoRecord& record)
+{
+    CardModel& movedCard = _gameModel->cards[record.movedCardId];
+    CardModel& previousTop = _gameModel->cards[record.previousTopCardId];
+
+    previousTop.zone = CZT_TOP;
+    _gameModel->topCardId = record.previousTopCardId;
+
+    if (record.source == UMS_PLAYFIELD)
+    {
+        movedCard.zone = CZT_PLAYFIELD;
+        _gameView->setCardVisible(record.movedCardId, true);
+        _gameView->setCardPosition(record.movedCardId, record.movedFromPos);
+        _gameView->setCardZOrder(record.movedCardId, 10);
+    }
+    else
+    {
+        movedCard.zone = CZT_STACK;
+        _gameModel->stackDrawIndex = record.previousStackDrawIndex;
+        _gameView->setCardPosition(record.movedCardId, _gameView->getStackPeekSlotPosition());
+    }
+
+    _gameView->setCardVisible(record.previousTopCardId, true);
+    _gameView->setTopCard(record.previousTopCardId);
+    _gameView->setStackPeekCard(_getStackPeekCardId());
+
+    _refreshViewState();
+    _saveGameProgress();
+    _isAnimating = false;
 }
 
 bool GameController::_replaceTopWithCard(int cardId, UndoMoveSource source)
@@ -243,16 +255,31 @@ bool GameController::_replaceTopWithCard(int cardId, UndoMoveSource source)
         return false;
     }
 
-    // Capture undo snapshot before mutating runtime state.
+    _undoManager.pushRecord(_buildUndoRecord(cardId, previousTopCardId, source));
+    _applyTopReplacementState(cardId, previousTopCardId, source);
+
+    // State is updated first; animation then syncs the view.
+    _isAnimating = true;
+    _gameView->moveCardToTop(cardId, [this, previousTopCardId, source]() {
+        _finalizeTopReplacement(previousTopCardId, source);
+    });
+
+    return true;
+}
+
+UndoRecord GameController::_buildUndoRecord(int cardId, int previousTopCardId, UndoMoveSource source) const
+{
     UndoRecord record;
     record.movedCardId = cardId;
     record.previousTopCardId = previousTopCardId;
     record.previousStackDrawIndex = _gameModel->stackDrawIndex;
     record.movedFromPos = _gameView->getCardPosition(cardId);
     record.source = source;
+    return record;
+}
 
-    _undoManager.pushRecord(record);
-
+void GameController::_applyTopReplacementState(int cardId, int previousTopCardId, UndoMoveSource source)
+{
     CardModel& incoming = _gameModel->cards[cardId];
     CardModel& previousTop = _gameModel->cards[previousTopCardId];
 
@@ -265,23 +292,20 @@ bool GameController::_replaceTopWithCard(int cardId, UndoMoveSource source)
         // Consuming stack peek advances draw pointer.
         _gameModel->stackDrawIndex += 1;
     }
+}
 
-    // State is updated first; animation then syncs the view.
-    _isAnimating = true;
-    _gameView->moveCardToTop(cardId, [this, previousTopCardId, source]() {
-        _gameView->setCardVisible(previousTopCardId, false);
-        _gameView->setTopCard(_gameModel->topCardId);
-        if (source == UMS_STACK)
-        {
-            _gameView->setStackPeekCard(_getStackPeekCardId());
-        }
+void GameController::_finalizeTopReplacement(int previousTopCardId, UndoMoveSource source)
+{
+    _gameView->setCardVisible(previousTopCardId, false);
+    _gameView->setTopCard(_gameModel->topCardId);
+    if (source == UMS_STACK)
+    {
+        _gameView->setStackPeekCard(_getStackPeekCardId());
+    }
 
-        _refreshViewState();
-        _saveGameProgress();
-        _isAnimating = false;
-    });
-
-    return true;
+    _refreshViewState();
+    _saveGameProgress();
+    _isAnimating = false;
 }
 
 int GameController::_getStackPeekCardId() const

@@ -111,6 +111,14 @@ bool CardView::initWithCardId(int cardId)
     setContentSize(kCardSize);
     setAnchorPoint(Vec2(0.5f, 0.5f));
 
+    _createRenderNodes();
+    _setupTouchListener();
+
+    return true;
+}
+
+void CardView::_createRenderNodes()
+{
     _background = DrawNode::create();
     addChild(_background);
 
@@ -137,7 +145,10 @@ bool CardView::initWithCardId(int cardId)
     _smallSuitSprite->setPosition(Vec2(kCardSize.width * 0.30f, kCardSize.height * 0.33f));
     _smallSuitSprite->setVisible(false);
     addChild(_smallSuitSprite, 1);
+}
 
+void CardView::_setupTouchListener()
+{
     auto listener = EventListenerTouchOneByOne::create();
     listener->setSwallowTouches(false);
     listener->onTouchBegan = [this](Touch* touch, Event*) {
@@ -158,8 +169,6 @@ bool CardView::initWithCardId(int cardId)
         }
     };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
-
-    return true;
 }
 
 void CardView::updateVisual(CardFaceType face, CardSuitType suit)
@@ -170,30 +179,45 @@ void CardView::updateVisual(CardFaceType face, CardSuitType suit)
     const std::string smallNumberPath = StringUtils::format("res/res/number/small_%s_%s.png", colorToken.c_str(), faceToken.c_str());
     const std::string suitPath = StringUtils::format("res/res/suits/%s.png", suitToToken(suit));
 
+    if (_applyImageVisual(bigNumberPath, smallNumberPath, suitPath))
+    {
+        return;
+    }
+
+    _applyFallbackVisual(faceToken, suit);
+}
+
+bool CardView::_applyImageVisual(const std::string& bigNumberPath, const std::string& smallNumberPath, const std::string& suitPath)
+{
     const bool hasImageAssets =
         setSpriteTextureIfExists(_cardBgSprite, kCardBgPath) &&
         setSpriteTextureIfExists(_bigNumberSprite, bigNumberPath) &&
         setSpriteTextureIfExists(_smallNumberSprite, smallNumberPath) &&
         setSpriteTextureIfExists(_smallSuitSprite, suitPath);
 
-    if (hasImageAssets)
+    if (!hasImageAssets)
     {
-        _background->clear();
-        _label->setString("");
-
-        const Size bgSize = _cardBgSprite->getContentSize();
-        if (bgSize.width > 0.0f && bgSize.height > 0.0f)
-        {
-            _cardBgSprite->setScaleX(kCardSize.width / bgSize.width);
-            _cardBgSprite->setScaleY(kCardSize.height / bgSize.height);
-        }
-
-        _bigNumberSprite->setScale(0.45f);
-        _smallNumberSprite->setScale(0.6f);
-        _smallSuitSprite->setScale(0.7f);
-        return;
+        return false;
     }
 
+    _background->clear();
+    _label->setString("");
+
+    const Size bgSize = _cardBgSprite->getContentSize();
+    if (bgSize.width > 0.0f && bgSize.height > 0.0f)
+    {
+        _cardBgSprite->setScaleX(kCardSize.width / bgSize.width);
+        _cardBgSprite->setScaleY(kCardSize.height / bgSize.height);
+    }
+
+    _bigNumberSprite->setScale(0.45f);
+    _smallNumberSprite->setScale(0.6f);
+    _smallSuitSprite->setScale(0.7f);
+    return true;
+}
+
+void CardView::_applyFallbackVisual(const std::string& faceToken, CardSuitType suit)
+{
     _cardBgSprite->setVisible(false);
     _bigNumberSprite->setVisible(false);
     _smallNumberSprite->setVisible(false);

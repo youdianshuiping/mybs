@@ -284,6 +284,25 @@ void GameView::_handleCardClicked(int cardId)
 
 void GameView::_layoutStackCards()
 {
+    _hideAllStackCardsExceptTop();
+
+    if (_stackPeekCardId < 0 || _stackPeekCardId == _topCardId)
+    {
+        return;
+    }
+
+    const int peekIndex = _findStackPeekIndex();
+
+    if (peekIndex < 0)
+    {
+        return;
+    }
+
+    _layoutVisibleStackCards(peekIndex);
+}
+
+void GameView::_hideAllStackCardsExceptTop()
+{
     for (int cardId : _stackCardIds)
     {
         auto it = _cardViews.find(cardId);
@@ -298,23 +317,24 @@ void GameView::_layoutStackCards()
             it->second->setVisible(false);
         }
     }
+}
 
-    if (_stackPeekCardId < 0 || _stackPeekCardId == _topCardId)
-    {
-        return;
-    }
-
-    int peekIndex = -1;
+int GameView::_findStackPeekIndex() const
+{
     for (int index = 0; index < static_cast<int>(_stackCardIds.size()); ++index)
     {
         if (_stackCardIds[index] == _stackPeekCardId)
         {
-            peekIndex = index;
-            break;
+            return index;
         }
     }
 
-    if (peekIndex < 0)
+    return -1;
+}
+
+void GameView::_layoutVisibleStackCards(int peekIndex)
+{
+    if (peekIndex < 0 || peekIndex >= static_cast<int>(_stackCardIds.size()))
     {
         return;
     }

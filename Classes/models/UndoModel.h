@@ -4,7 +4,9 @@
 #include "json/document.h"
 
 /**
- * UndoMoveSource marks where incoming top card came from.
+ * @brief 撤销记录中的移动来源。
+ *
+ * 标记替换顶部牌时，新牌来自场上还是牌堆。
  */
 enum UndoMoveSource
 {
@@ -13,16 +15,29 @@ enum UndoMoveSource
 };
 
 /**
- * UndoRecord stores one replace-top operation for rollback.
+ * @brief 一次替换顶部牌操作的回滚快照。
+ *
+ * 记录回退所需的最小状态集，支持序列化与反序列化，
+ * 供撤销管理和存档恢复使用。
  */
 struct UndoRecord
 {
+    /** 本次移动到顶部的卡牌 id。 */
     int movedCardId = -1;
+    /** 被替换前的顶部牌 id。 */
     int previousTopCardId = -1;
+    /** 操作前牌堆游标。 */
     int previousStackDrawIndex = 1;
+    /** 被移动卡牌的原始位置。 */
     cocos2d::Vec2 movedFromPos = cocos2d::Vec2::ZERO;
+    /** 新顶部牌来源。 */
     UndoMoveSource source = UMS_PLAYFIELD;
 
+    /**
+     * @brief 序列化为 JSON 对象。
+     * @param allocator RapidJSON 分配器。
+     * @return 对应的 JSON 值对象。
+     */
     rapidjson::Value toJson(rapidjson::Document::AllocatorType& allocator) const
     {
         rapidjson::Value obj(rapidjson::kObjectType);
@@ -39,6 +54,11 @@ struct UndoRecord
         return obj;
     }
 
+    /**
+     * @brief 从 JSON 对象反序列化。
+     * @param obj 输入 JSON 对象。
+     * @return true 表示解析成功；false 表示解析失败。
+     */
     bool fromJson(const rapidjson::Value& obj)
     {
         if (!obj.IsObject())
