@@ -1,5 +1,7 @@
 # mybs 项目逻辑文档
 
+> 开发与代码分层执行标准见 [DEVELOPMENT_STANDARDS.md](DEVELOPMENT_STANDARDS.md)。
+
 ## 1. 项目定位
 
 mybs 是一个基于 Cocos2d-x 3.17.2 的简化卡牌匹配示例。
@@ -110,21 +112,7 @@ mybs 是一个基于 Cocos2d-x 3.17.2 的简化卡牌匹配示例。
 	 - 若来源是 Stack：moved 牌回到 `CZT_STACK` 且 `stackDrawIndex` 回滚
 4. 更新可见性、Top、Stack Peek、提示和 Undo 可用状态。
 
-## 6. 视图刷新策略
-
-`_refreshViewState()` 是界面一致性的核心兜底：
-
-- 遍历 `playfieldCardIds`：
-	- 仅当卡牌在 `CZT_PLAYFIELD` 且与 Top 可匹配时可点击。
-	- 仅 `CZT_PLAYFIELD`（以及当前 Top）应可见。
-- 牌堆 peek（若存在）永远可点击。
-- Undo 按钮跟随 `UndoManager.canUndo()`。
-- 提示文案优先级：
-	1. 有可匹配场上牌
-	2. 无匹配但有牌堆可抽
-	3. 牌堆为空
-
-## 7. 关卡配置与数据映射
+## 6. 关卡配置与数据映射
 
 配置文件：`Resources/levels/level_1.json`
 
@@ -133,17 +121,7 @@ mybs 是一个基于 Cocos2d-x 3.17.2 的简化卡牌匹配示例。
 
 生成器会给每张牌分配自增 id：先 Playfield，再 Stack。
 
-## 8. 当前已知边界与限制
+## 7. 扩展
 
-- 规则仅支持“点数差 1”，未包含环形规则（如 K 与 A 互通）。
-- 没有显式“胜利/失败”终局判定逻辑。
-- 撤销仅覆盖“替换 Top”动作。
-- 场上牌无覆盖关系或解锁机制（全部按静态位置直接可见）。
-
-## 9. 扩展建议
-
-1. 增加终局判定（清空场上牌即胜利；无匹配且无 Stack 即失败）。
-2. 为 `CardRuleService` 增加可配置规则（是否允许 A-K 相邻等）。
-3. 在 `GameModel` 中引入覆盖/依赖图，支持“翻牌解锁”玩法。
-4. 将槽位坐标、动画时长、提示文案迁移到配置层。
-5. 增加序列化（存档/读档）与回放能力。
+1、新加卡牌可以在json文件中直接添加，填写花色、数字和位置即可
+2、新类型的回退可以在undorecord中存储行为，还可以添加回调函数功能

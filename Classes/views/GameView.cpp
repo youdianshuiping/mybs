@@ -26,10 +26,10 @@ bool GameView::init()
     _createRegions();
     _createUndoButton();
 
-    _tipLabel = Label::createWithSystemFont("", "Arial", 30);
-    _tipLabel->setAnchorPoint(Vec2(0.5f, 0.5f));
-    _tipLabel->setPosition(Vec2(540.0f, 530.0f));
-    addChild(_tipLabel, 20);
+    // _tipLabel = Label::createWithSystemFont("", "Arial", 30);
+    // _tipLabel->setAnchorPoint(Vec2(0.5f, 0.5f));
+    // _tipLabel->setPosition(Vec2(540.0f, 530.0f));
+    // addChild(_tipLabel, 20);
 
     return true;
 }
@@ -238,14 +238,14 @@ void GameView::_createRegions()
     stackBg->drawSolidPoly(stack, 4, Color4F(0.16f, 0.23f, 0.36f, 1.0f));
     addChild(stackBg, -1);
 
-    auto title = Label::createWithSystemFont("Simple Match + Undo", "Arial", 34);
-    title->setPosition(Vec2(540.0f, 2020.0f));
-    addChild(title, 10);
+    // auto title = Label::createWithSystemFont("", "Arial", 34);
+    // title->setPosition(Vec2(540.0f, 2020.0f));
+    // addChild(title, 10);
 }
 
 void GameView::_createUndoButton()
 {
-    auto label = Label::createWithSystemFont("Undo", "Arial", 42);
+    auto label = Label::createWithSystemFont("回退", "Arial", 42);
     _undoItem = MenuItemLabel::create(label, [this](Ref*) {
         if (_onUndoClick)
         {
